@@ -4,7 +4,7 @@ info:
   description: API for managing authentication, people, and clients.
   version: 1.0.0
 servers:
-  - url: https://developyr-api.azurewebsites.netapi
+  - url: https://developyr-api.azurewebsites.net/api
 paths:
   /auth:
     post:
