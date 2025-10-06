@@ -1,7 +1,13 @@
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
 load_dotenv()
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+SCRIPT_DIR = PROJECT_ROOT / 'src'
+DATA_DIR = PROJECT_ROOT / 'data'  # Fixed: data directory is at project root, not in src
+CLIENT_CONTACT_FILE = DATA_DIR / 'client_contact_status.csv'
 
 API_USERNAME = os.getenv("JANELL_API_USERNAME")
 API_PASSWORD = os.getenv("JANELL_API_PASSWORD")
