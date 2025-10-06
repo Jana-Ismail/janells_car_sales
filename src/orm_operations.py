@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.dialects.postgresql import insert
 from models import SalesRep, Client, Person, ContactPermission
 
@@ -86,7 +86,7 @@ def create_contact_permissions(session, clients_data):
 
     session.execute(upsert_stmt)
 
-from sqlalchemy import func
+
 
 def update_contact_permissions(session, contact_permissions):
     table = ContactPermission.__table__
@@ -125,48 +125,19 @@ def update_contact_permissions(session, contact_permissions):
 
     session.execute(upsert_statement)
 
+def join_clients_and_contact_permissions(session):
+    join_statement = select(
+        Client.id,
+        Client.name,
+        Client.company,
+        Client.email,
+        Client.phone,
+        ContactPermission.can_call,
+        ContactPermission.can_email
+    ).join(
+        ContactPermission, 
+        Client.id == ContactPermission.client_id
+    )
 
-# def create_contact_permissions(session, clients_data):
-#     table = ContactPermission.__table__
-
-#     contact_records = []
-#     for client in clients_data:
-#         contact_records.append({
-#             'client_id': client.get('id'),
-#             'can_call': False,
-#             'can_email': False
-#         })
-
-#     insert_stmt = insert(table).values(contact_records)
-#     upsert_stmt = insert_stmt.on_conflict_do_update(
-#         index_elements=['client_id'],
-#         set_={
-#             'can_call': insert_stmt.excluded.can_call,
-#             'can_email': insert_stmt.excluded.can_email
-#         }
-#     )
-
-#     session.execute(upsert_stmt)
-
-# def update_contact_permissions(session, contact_permissions):
-#     table = ContactPermission.__table__
-
-#     contact_records = []
-    
-#     for contact in contact_permissions:
-#         contact_records.append({
-#             'client_id': contact['id'],
-#             'can_call': bool(int(contact.get('can_call', 0))),
-#             'can_email': bool(int(contact.get('can_email', 0)))
-#         })
-
-#     insert_statement = insert(table).values(contact_records)
-#     upsert_statement = insert_statement.on_conflict_do_update(
-#         index_elements=['client_id'],
-#         set_={
-#             'can_call': insert_statement.excluded.can_call,
-#             'can_email': insert_statement.excluded.can_email
-#         }
-#     )
-
-#     session.execute(upsert_statement)
+    results = session.execute(join_statement).all()
+    return results
