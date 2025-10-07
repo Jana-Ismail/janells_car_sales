@@ -58,15 +58,34 @@ def create_clients(session, clients_data, sales_rep_lookup):
     session.execute(upsert_statement)
 
 def create_people(session, people_data):
-    for person in people_data:
-        session.add(Person(
-            id=person.get('id'),
-            first_name=person.get('first_name'),
-            last_name=person.get('last_name'),
-            email=person.get('email'),
-            address=person.get('address')
-        ))
-from sqlalchemy.dialects.postgresql import insert
+    people_table = Person.__table__
+
+    person_records = [
+        {
+            'id': person.get('id'),
+            'first_name': person.get('first_name'),
+            'last_name': person.get('last_name'),
+            'email': person.get('email'),
+            'address': person.get('address')
+        }
+        for person in people_data
+    ]
+
+    if not person_records:
+        return
+
+    insert_statement = insert(people_table).values(person_records)
+    upsert_statement = insert_statement.on_conflict_do_update(
+        index_elements=['id'],  # Primary key constraint
+        set_={
+            'first_name': insert_statement.excluded.first_name,
+            'last_name': insert_statement.excluded.last_name,
+            'email': insert_statement.excluded.email,
+            'address': insert_statement.excluded.address
+        }
+    )
+
+    session.execute(upsert_statement)
 
 def create_contact_permissions(session, clients_data):
     table = ContactPermission.__table__

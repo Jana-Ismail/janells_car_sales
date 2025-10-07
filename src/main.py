@@ -1,6 +1,7 @@
 import os
 import json
 import pandas as pd
+import numpy as np
 import csv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
@@ -42,6 +43,14 @@ def save_sample_json(data, filename):
     with open(filepath, 'w') as file:
         json.dump(data, file, indent=2)
 
+def handle_nulls(data, nulls_values):
+    dataframe = pd.DataFrame(data)
+    dataframe.replace(nulls_values, np.nan, inplace=True)
+
+    dataframe = dataframe.where(pd.notnull(dataframe), None)
+
+    return dataframe.to_dict(orient='records')
+
 def process_people(base_url, token, engine):
     limit = 10
     offset= 0
@@ -52,15 +61,20 @@ def process_people(base_url, token, engine):
         
         if not people_batch:
             break
+        
+        nulls = ['null', 'null', None, 'NULL', 'na', 'N/A', '', ' ']
+
+        people_clean = handle_nulls(people_batch, nulls)
 
         if offset == 0:
             save_sample_json(people_batch, 'people_sample.json')
     
         with Session(engine) as session:
             try:
-                create_people(session, people_batch)
+                create_people(session, people_clean)
                 session.commit()
             except Exception as e:
+                print(f"Error processing people at offset {offset}: {e}")
                 session.rollback()
             finally:
                 offset += limit
@@ -78,12 +92,15 @@ def process_clients(base_url, token, engine):
 
         if offset == 0:
             save_sample_json(clients_batch, 'clients_sample.json')
+        
+        nulls = ['null', 'null', None, 'NULL', 'na', 'N/A', '', ' ']
+        clients_clean = handle_nulls(clients_batch, nulls)
     
         with Session(engine) as session:
             try:
-                rep_lookup = create_sales_rep(session, clients_batch)
-                create_clients(session, clients_batch, rep_lookup)
-                create_contact_permissions(session, clients_batch)
+                rep_lookup = create_sales_rep(session, clients_clean)
+                create_clients(session, clients_clean, rep_lookup)
+                create_contact_permissions(session, clients_clean)
                 session.commit()
             except Exception as e:
                 print(f"Error processing clients at offset {offset}: {e}")
